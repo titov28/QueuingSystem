@@ -37,7 +37,21 @@ namespace QueuingSystemLibraries.QueuingModel
 
             return flag;
         }
-        
+
+        public void ChangeCurrentProcessor()
+        {
+            for (int i = 0; i < Requests.Length; i++)
+            {
+                if (Requests[i].Status == RequestStatus.NonProcessed)
+                {
+                    CurrentTypeProcessor = Requests[i].Type == TypeRequest.XCHG
+                        ? TypeProcessor.Exchange
+                        : TypeProcessor.Operating;
+                    
+                    break;
+                }
+            }
+        }
     }
    
 }

@@ -9,6 +9,7 @@ namespace QueuingSystemLibraries.Other
 {
     public class Generator
     {
+        private Barrier _barrier;
         private int _numberClients;
         private int _interval;
         private Time _timeStartGeneratingClient;
@@ -46,30 +47,42 @@ namespace QueuingSystemLibraries.Other
             _timeFinishGeneratingClient = finishGeneratingTime;
             _interval = ((finishGeneratingTime - startGeneretingTime)).GetTimeInMinutes() / _numberClients;
             Clients = new List<Client>(_numberClients);
-            
+            _currentTime = new Time(8, 30);
         }
 
         public void Start()
         {
-            while (_currentTime != _timeFinishGeneratingClient)
+            while (true)
             {
-                if (Clients.Count != 0)
+                if (_currentTime != _timeFinishGeneratingClient)
                 {
-                    for (int i = 0; i < Clients.Count; i++)
+                    if (Clients.Count != 0)
                     {
-                        if (Clients[i].StartGoingInSystem == _currentTime)
+                        for (int i = 0; i < Clients.Count; i++)
                         {
-                            OnGeneratedClient(new GeneratedClientEventArgs(Clients[i]));
-                            Clients.RemoveAt(i);
-                        }
+                            if (Clients[i].StartGoingInSystem > _currentTime)
+                            {
+                                break;
+                            }
+                            
+                            if (Clients[i].StartGoingInSystem <= _currentTime)
+                            {
+                                OnGeneratedClient(new GeneratedClientEventArgs(Clients[i]));
+                                Clients.RemoveAt(i);
+                            }
 
-                        if (Clients[i].StartGoingInSystem > _currentTime)
-                        {
-                            break;
                         }
                     }
                 }
+
+                if (_barrier is not null)
+                {
+                    //Console.WriteLine($"{Thread.CurrentThread.Name} wrote");
+                    _barrier.SignalAndWait();
+                }
+
             }
+
         }
         private void OnGeneratedClient(GeneratedClientEventArgs e)
         {
@@ -77,6 +90,14 @@ namespace QueuingSystemLibraries.Other
             if (handler != null)
             {
                 handler(this, e);
+            }
+        }
+
+        public void InitBarrier(Barrier br)
+        {
+            if (br is not null)
+            {
+                _barrier = br;
             }
         }
         
@@ -161,16 +182,16 @@ namespace QueuingSystemLibraries.Other
             switch (tr)
             {
                 case TypeRequest.XCHG:
-                    dt = new Time(4);
+                    dt = new Time(5);
                     break;
                 case TypeRequest.CARD:
-                    dt = new Time(3);
+                    dt = new Time(4);
                     break;
                 case TypeRequest.CRED:
-                    dt = new Time(2);
+                    dt = new Time(3);
                     break;
                 case TypeRequest.ACNT:
-                    dt = new Time(1);
+                    dt = new Time(2);
                     break;
                 default: dt = new Time(5);
                     break;

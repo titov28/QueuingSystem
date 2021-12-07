@@ -9,7 +9,7 @@ namespace QueuingSystemLibraries.QueuingModel
 {
     delegate bool SomeDo(Client cl);
 
-    enum QueuingSystemStatus
+    public enum QueuingSystemStatus
     {
         Ready,
         NotReady
@@ -17,12 +17,12 @@ namespace QueuingSystemLibraries.QueuingModel
     
     public sealed class QueuingSystem: CommonTitle
     {
-
-        public static List<Client> GlobalQueue = new List<Client>();
+        private Barrier _barrier;
+        public static ConcurrentQueue<Client> GlobalQueue = new ConcurrentQueue<Client>();
         private Queue _queue;
         private Processor[] _processors;
 
-        private QueuingSystemStatus Status = QueuingSystemStatus.Ready;
+        public QueuingSystemStatus Status = QueuingSystemStatus.Ready;
         private SomeDo _doSomething;
         private Client _movedClient;
         public QueuingSystem(ulong id, string title, Queue queue, Processor[] processors)
@@ -44,8 +44,6 @@ namespace QueuingSystemLibraries.QueuingModel
             {
                 if (_doSomething != null)
                 {
-                    Status = QueuingSystemStatus.NotReady;
-                    GlobalQueue.Add(_movedClient);
                     if (!_doSomething(_movedClient))
                     {
                         _movedClient.Rejection();
@@ -54,6 +52,20 @@ namespace QueuingSystemLibraries.QueuingModel
                     Unsubscribe();
                     Status = QueuingSystemStatus.Ready;
                 }
+                
+                if (_barrier is not null)
+                {
+                    //Console.WriteLine($"{Thread.CurrentThread.Name} wrote");
+                    _barrier.SignalAndWait();
+                }
+            }
+        }
+        
+        public void InitBarrier(Barrier br)
+        {
+            if (br is not null)
+            {
+                _barrier = br;
             }
         }
         
@@ -77,12 +89,7 @@ namespace QueuingSystemLibraries.QueuingModel
 
             return processor;
         }
-
-        public static void AddInGlobalQueue(Client cl)
-        {
-            GlobalQueue.Add(cl);
-        }
-
+       
         private void Subscribe()
         {
             _doSomething = _queue.TryEnqueue;
@@ -97,15 +104,22 @@ namespace QueuingSystemLibraries.QueuingModel
         {
             if (Status == QueuingSystemStatus.Ready)
             {
+                Status = QueuingSystemStatus.NotReady;
                 Interlocked.Exchange(ref _movedClient , e.Client);
                 _movedClient.EnteredInSystem();
                 Subscribe();
+                GlobalQueue.Enqueue(_movedClient);
             }
             else
             {
                 e.Client.Rejection();
-                GlobalQueue.Add(e.Client);
+                GlobalQueue.Enqueue(e.Client);
             }
+        }
+
+        public int GetQueueCapacity()
+        {
+            return _queue.NumberClient;
         }
         
     }

@@ -9,8 +9,8 @@ namespace QueuingSystemLibraries.QueuingModel
 {
     public sealed class Queue: CommonQueue
     {
-        private readonly object _lockObject; 
-        
+        private readonly object _lockObject;
+        public event EventHandler ClientAdded;
 
         public Queue(ulong id, string title, int maxSize):base(maxSize)
         {
@@ -35,6 +35,7 @@ namespace QueuingSystemLibraries.QueuingModel
                 cl.EnteredInQueue();
                 NumberClient++;
                 NonEmpty();
+                OnClientAdded();
                 return true;
             }
             finally
@@ -98,6 +99,7 @@ namespace QueuingSystemLibraries.QueuingModel
             return clientPosition;
         }
         
+        
         public bool IsFull()
         {
             return NumberClient == MaxSize;
@@ -107,6 +109,17 @@ namespace QueuingSystemLibraries.QueuingModel
         {
             return NumberClient == 0;
         }
+
+        private void OnClientAdded()
+        {
+            EventHandler handler = Volatile.Read(ref ClientAdded);
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
+            }
+        }
+        
+        
     }
     
     

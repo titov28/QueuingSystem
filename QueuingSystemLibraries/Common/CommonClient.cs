@@ -23,7 +23,7 @@ namespace QueuingSystemLibraries.Common
     #region StatisticTime
         public Time EnteredInQueueTime { get; protected set; }
         public Time WentOutFromQueueTime { get; protected set; }
-        public Time SummaryInQueueTime { get; protected set; }
+        public Time SummaryInQueueTime { get; protected set; } = new Time(0);
         
     #endregion
 
